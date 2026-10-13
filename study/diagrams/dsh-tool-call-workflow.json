@@ -1,0 +1,401 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "DeepSeek Harness 工具调用流水线",
+    "locale": "zh-CN",
+    "quality_profile": "showcase"
+  },
+  "lanes": [
+    {
+      "id": "ui",
+      "label": "用户界面"
+    },
+    {
+      "id": "agent",
+      "label": "Agent Runtime"
+    },
+    {
+      "id": "policy",
+      "label": "策略边界"
+    },
+    {
+      "id": "tools",
+      "label": "工具执行"
+    },
+    {
+      "id": "exception",
+      "label": "异常处理",
+      "variant": "exception"
+    },
+    {
+      "id": "observe",
+      "label": "可观测性"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intake",
+      "label": "登记调用",
+      "fromCol": 0,
+      "toCol": 0
+    },
+    {
+      "id": "gate",
+      "label": "策略门",
+      "fromCol": 1,
+      "toCol": 2,
+      "variant": "security"
+    },
+    {
+      "id": "run",
+      "label": "执行",
+      "fromCol": 3,
+      "toCol": 4,
+      "variant": "emphasis"
+    },
+    {
+      "id": "settle",
+      "label": "结算",
+      "fromCol": 5,
+      "toCol": 5
+    }
+  ],
+  "mainPath": [
+    "tool_call",
+    "pre_execute",
+    "approval",
+    "execute",
+    "post_execute",
+    "tool_result"
+  ],
+  "nodes": [
+    {
+      "id": "card_pending",
+      "lane": "ui",
+      "col": 0,
+      "type": "frontend",
+      "label": "待处理卡片",
+      "sublabel": "presentCall(args)",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "approval_prompt",
+      "lane": "ui",
+      "col": 2,
+      "type": "frontend",
+      "label": "审批提示",
+      "sublabel": "人工一次性回答",
+      "tag": "人在环",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "card_done",
+      "lane": "ui",
+      "col": 5,
+      "type": "frontend",
+      "label": "完成卡片",
+      "sublabel": "presentResult(args, result)",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "tool_call",
+      "lane": "agent",
+      "col": 0,
+      "type": "backend",
+      "label": "tool/call",
+      "sublabel": "assistant 消息含工具调用",
+      "tag": "先记录",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "tool_result",
+      "lane": "agent",
+      "col": 5,
+      "type": "backend",
+      "label": "tool/result",
+      "sublabel": "单一模型可见结果",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "next_step",
+      "lane": "agent",
+      "col": 3,
+      "type": "backend",
+      "label": "模型决定下一步",
+      "sublabel": "重试 · 升级权限 · 换方法",
+      "tag": "同一 turn 内",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "pre_execute",
+      "lane": "policy",
+      "col": 1,
+      "type": "security",
+      "label": "tools/pre-execute",
+      "sublabel": "PreToolUse hook · 权限预设",
+      "tag": "allow / ask / deny",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "approval",
+      "lane": "policy",
+      "col": 2,
+      "type": "security",
+      "label": "ctx.approval",
+      "sublabel": "答复者瀑布，缺席即拒绝",
+      "tag": "fail-closed",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "post_execute",
+      "lane": "policy",
+      "col": 5,
+      "type": "security",
+      "label": "tools/post-execute",
+      "sublabel": "投影 · 放行 · 阻断 · 补上下文",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "execute",
+      "lane": "tools",
+      "col": 3,
+      "type": "backend",
+      "label": "execute() 工具体",
+      "sublabel": "沙箱内 bash / fs / web",
+      "tag": "exec.signal 可取消",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "denied",
+      "lane": "exception",
+      "col": 2,
+      "type": "security",
+      "label": "拒绝，跳过工具体",
+      "sublabel": "rejected / unavailable",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "normalize",
+      "lane": "exception",
+      "col": 4,
+      "type": "messagebus",
+      "label": "异常归一化",
+      "sublabel": "超时 / 抛错 / 沙箱拒绝",
+      "tag": "回合不中断",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "log_call",
+      "lane": "observe",
+      "col": 0,
+      "type": "database",
+      "label": "记录 tool/call",
+      "sublabel": "执行前追加会话日志",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "audit",
+      "lane": "observe",
+      "col": 2,
+      "type": "database",
+      "label": "审批审计",
+      "sublabel": "approval/asked → decided",
+      "width": 140,
+      "height": 72
+    },
+    {
+      "id": "log_result",
+      "lane": "observe",
+      "col": 5,
+      "type": "database",
+      "label": "记录 tool/result",
+      "sublabel": "遥测 emit · isError 记 error",
+      "width": 140,
+      "height": 72
+    }
+  ],
+  "edges": [
+    {
+      "id": "call-pre",
+      "from": "tool_call",
+      "to": "pre_execute",
+      "label": "进入瀑布",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "pre-approval",
+      "from": "pre_execute",
+      "to": "approval",
+      "label": "ask",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "approval-execute",
+      "from": "approval",
+      "to": "execute",
+      "label": "allowed-once",
+      "variant": "emphasis",
+      "role": "main",
+      "fromSide": "right",
+      "toSide": "top"
+    },
+    {
+      "id": "execute-post",
+      "from": "execute",
+      "to": "post_execute",
+      "label": "无损结果快照",
+      "variant": "emphasis",
+      "role": "main",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "post-result",
+      "from": "post_execute",
+      "to": "tool_result",
+      "label": "finalizeContent",
+      "variant": "emphasis",
+      "role": "main"
+    },
+    {
+      "id": "call-card",
+      "from": "tool_call",
+      "to": "card_pending",
+      "label": "presentCall",
+      "role": "branch"
+    },
+    {
+      "id": "call-log",
+      "from": "tool_call",
+      "to": "log_call",
+      "label": "先记录再执行",
+      "variant": "dashed",
+      "role": "async"
+    },
+    {
+      "id": "approval-prompt",
+      "from": "approval",
+      "to": "approval_prompt",
+      "label": "一次性询问 · allow / reject",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "pre-denied",
+      "from": "pre_execute",
+      "to": "denied",
+      "label": "deny（hook / never 策略）",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "approval-denied",
+      "from": "approval",
+      "to": "denied",
+      "label": "rejected / unavailable",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "denied-normalize",
+      "from": "denied",
+      "to": "normalize",
+      "label": "Error 结果",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "execute-normalize",
+      "from": "execute",
+      "to": "normalize",
+      "label": "超时 / 抛错 / [sandbox: denied]",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "normalize-post",
+      "from": "normalize",
+      "to": "post_execute",
+      "label": "isError 结果继续结算",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "result-card",
+      "from": "tool_result",
+      "to": "card_done",
+      "label": "presentResult",
+      "role": "branch"
+    },
+    {
+      "id": "log-audit",
+      "from": "log_call",
+      "to": "audit",
+      "label": "approval/asked · decided",
+      "variant": "dashed",
+      "role": "async"
+    },
+    {
+      "id": "audit-log",
+      "from": "audit",
+      "to": "log_result",
+      "label": "tool/result → 遥测",
+      "variant": "dashed",
+      "role": "async"
+    },
+    {
+      "id": "result-next",
+      "from": "tool_result",
+      "to": "next_step",
+      "label": "读取结果后决定",
+      "variant": "dashed",
+      "role": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "审批语义",
+      "items": [
+        "ctx.approval.request() 只返回 allowed-once / rejected / cancelled / unavailable，没有 allow-always",
+        "答复者缺席、抛错或返回非法值一律 unavailable，失败关闭；never 策略在任何答复者之前确定性拒绝",
+        "请求必须在打开的 turn 内；答复者只看到工具名与理由，看不到参数"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "重试与阻塞",
+      "items": [
+        "模型请求失败由 dsh-llm-retry 在 agent/request-error 上先写 llm/retry 事件再等待，同一 turn 内重跑同一步",
+        "工具超时、抛错、沙箱拒绝都变成 isError 结果交回模型；沙箱拒绝可用 sandbox_permissions + justification 同 turn 重试一次，经审批提示取得同意",
+        "PreToolUse hook 只能 deny / ask，PostToolUse 可用反馈阻断，单调守卫不可被后来的监听者绕过；相同调用 3 / 5 / 8 次触发提醒但不阻断"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "证据路径",
+      "items": [
+        "tool/call 在执行前记录；tool/result 是唯一模型可见结果，UI 卡片与回放都由它派生",
+        "approval/asked 与 approval/decided 仅入日志，不进模型上下文；工具自有事件 fs/observed、hook/invoked、tool/ptc-dispatch 同样落日志",
+        "遥测复制每条事件，经 sessionTelemetry/record 脱敏瀑布交给 OTel 后端，isError 记为 error 级别",
+        "新增 projectContent：工具体返回后、post-execute 之前，由定义方把执行期准备好的文本与图片投影进结果"
+      ]
+    }
+  ]
+}

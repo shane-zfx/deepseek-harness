@@ -1,0 +1,440 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "DeepSeek Harness 运行时架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/shane-zfx/deepseek-harness",
+      "revision": "d743267388641bc76f17c45ce8b4c231aed1d32c"
+    }
+  },
+  "components": [
+    {
+      "id": "developer",
+      "type": "external",
+      "label": "开发者",
+      "sublabel": "浏览器或 CLI",
+      "pos": [
+        30,
+        250
+      ],
+      "size": [
+        150,
+        62
+      ]
+    },
+    {
+      "id": "webclient",
+      "type": "frontend",
+      "label": "Web Client",
+      "sublabel": "apps/web · Desktop 复用",
+      "tag": "Client Cordis",
+      "pos": [
+        270,
+        250
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "apps/web/src/main.ts",
+          "label": "浏览器入口"
+        }
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "API Gateway (BFF)",
+      "sublabel": "Typert RPC 网关",
+      "tag": "签名 Cookie",
+      "pos": [
+        510,
+        250
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/api/gateway/README.md",
+          "label": "网关契约"
+        }
+      ]
+    },
+    {
+      "id": "agentloop",
+      "type": "backend",
+      "label": "Agent Loop",
+      "sublabel": "ctx.agentLoop 驱动",
+      "tag": "turn / step 驱动",
+      "pos": [
+        780,
+        250
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/core/agent-loop/src/agent.ts",
+          "label": "默认驱动"
+        }
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "backend",
+      "label": "LLM Seam",
+      "sublabel": "llm-deepseek + llm-retry",
+      "pos": [
+        780,
+        110
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/llm/llm-retry/README.md",
+          "label": "重试执行器"
+        }
+      ]
+    },
+    {
+      "id": "policy",
+      "type": "security",
+      "label": "Policy & Approval",
+      "sublabel": "ctx.approval · hooks",
+      "tag": "fail-closed",
+      "pos": [
+        1070,
+        400
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/interaction/user-approval/README.md",
+          "label": "审批接缝"
+        }
+      ]
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Tool Registry",
+      "sublabel": "ctx.tools 三段瀑布",
+      "pos": [
+        780,
+        400
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/core/tools/src/index.ts",
+          "label": "工具流水线"
+        }
+      ]
+    },
+    {
+      "id": "sessionlog",
+      "type": "database",
+      "label": "Session Log",
+      "sublabel": "JSONL / SQLite 追加日志",
+      "tag": "唯一事实来源",
+      "pos": [
+        510,
+        400
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/core/session/src/index.ts",
+          "label": "追加式日志"
+        }
+      ]
+    },
+    {
+      "id": "telemetry",
+      "type": "backend",
+      "label": "Session Telemetry",
+      "sublabel": "脱敏后 emit",
+      "pos": [
+        510,
+        550
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/session/session-telemetry/README.md",
+          "label": "遥测捕获"
+        }
+      ]
+    },
+    {
+      "id": "fsprov",
+      "type": "backend",
+      "label": "fs-sandbox",
+      "sublabel": "ctx.fs 工作区写围栏",
+      "pos": [
+        780,
+        550
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/fs/fs-sandbox/README.md",
+          "label": "文件围栏"
+        }
+      ]
+    },
+    {
+      "id": "shellprov",
+      "type": "backend",
+      "label": "bash / pwsh-sandbox",
+      "sublabel": "ctx.shell → subprocess",
+      "pos": [
+        1000,
+        550
+      ],
+      "size": [
+        170,
+        62
+      ],
+      "sources": [
+        {
+          "path": "packages/shell/bash-sandbox/README.md",
+          "label": "受限执行器"
+        }
+      ]
+    },
+    {
+      "id": "deepseek",
+      "type": "external",
+      "label": "DeepSeek API",
+      "sublabel": "Messages 流式 + Files",
+      "brand": "deepseek",
+      "pos": [
+        790,
+        20
+      ],
+      "size": [
+        150,
+        62
+      ]
+    },
+    {
+      "id": "websearch",
+      "type": "external",
+      "label": "Web 搜索 / 抓取",
+      "sublabel": "Exa / Perplexity / HTTP",
+      "pos": [
+        1070,
+        20
+      ],
+      "size": [
+        150,
+        62
+      ]
+    },
+    {
+      "id": "otel",
+      "type": "external",
+      "label": "OTel Collector",
+      "sublabel": "可选，默认关闭",
+      "pos": [
+        30,
+        550
+      ],
+      "size": [
+        150,
+        62
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "浏览器 · Client Cordis 环境",
+      "wraps": [
+        "webclient"
+      ],
+      "pad": 22
+    },
+    {
+      "kind": "region",
+      "label": "dsh Host 进程 · dsh --profile web",
+      "wraps": [
+        "gateway",
+        "agentloop",
+        "llm",
+        "policy",
+        "tools",
+        "sessionlog",
+        "telemetry",
+        "fsprov",
+        "shellprov"
+      ],
+      "pad": 24
+    },
+    {
+      "kind": "security-group",
+      "label": "沙箱执行世界 · ctx.sandbox（workspace-write）",
+      "wraps": [
+        "fsprov",
+        "shellprov"
+      ],
+      "pad": 16
+    }
+  ],
+  "connections": [
+    {
+      "from": "developer",
+      "to": "webclient",
+      "label": "输入提示词",
+      "variant": "emphasis"
+    },
+    {
+      "from": "webclient",
+      "to": "gateway",
+      "label": "RPC + 事件流",
+      "variant": "emphasis"
+    },
+    {
+      "from": "gateway",
+      "to": "agentloop",
+      "label": "agent.followup()",
+      "variant": "emphasis"
+    },
+    {
+      "from": "agentloop",
+      "to": "llm",
+      "label": "agent/request → llm/stream",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "llm",
+      "to": "deepseek",
+      "label": "HTTPS 流式",
+      "variant": "emphasis",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "from": "agentloop",
+      "to": "tools",
+      "label": "tool/call",
+      "variant": "emphasis",
+      "labelDx": 60,
+      "labelDy": 24
+    },
+    {
+      "from": "tools",
+      "to": "policy",
+      "label": "allow / ask / deny",
+      "variant": "security",
+      "labelDy": 22
+    },
+    {
+      "from": "tools",
+      "to": "fsprov",
+      "label": "read / write / edit",
+      "labelDy": 24,
+      "labelDx": -64
+    },
+    {
+      "from": "tools",
+      "to": "shellprov",
+      "label": "bash / pwsh",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "tools",
+      "to": "websearch",
+      "label": "web_search / web_fetch",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "from": "agentloop",
+      "to": "sessionlog",
+      "label": "追加 turn / step / tool 事件",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "from": "sessionlog",
+      "to": "gateway",
+      "label": "session/event 回放",
+      "labelDx": -70
+    },
+    {
+      "from": "sessionlog",
+      "to": "telemetry",
+      "label": "捕获副本",
+      "variant": "dashed",
+      "labelDy": 24
+    },
+    {
+      "from": "telemetry",
+      "to": "otel",
+      "label": "OTLP emit",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "组合与能力接缝",
+      "items": [
+        "全插件 Cordis 树，任何行都可由 profile 补丁替换；web profile 经 dsh-hmr 热重载，Plugin Manager 在 Web 与 Agent 内装插件",
+        "profile = dsh-base → dsh-web-app → cordis.patch.yml → --patch 有序叠加",
+        "能力 = Definition + Provider + Consumer；fs 与 subprocess 共享执行世界，换 E2B / SSH 远端时 bash、PTY、LSP 一起迁移"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "信任边界",
+      "items": [
+        "浏览器用启动 token 换签名 Cookie，只经 Typert RPC 与 Host 对话；Electron Desktop 复用同一 Web 应用与 Host，绑定 127.0.0.1",
+        "权限预设捆绑沙箱模式与审批策略（ask / never），未匹配组合显示为 custom",
+        "运行器按平台选 bwrap→Landlock / Seatbelt / Windows ACL；不可用时 SANDBOX_UNAVAILABLE 失败关闭"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "日志与外部依赖",
+      "items": [
+        "模型可见 ⟺ 已记录：系统提示词也以 system/message 入日志；fork、resume、遥测、UI 卡片都从日志投影",
+        "DeepSeek Messages API（api.deepseek.com/anthropic 下的 /v1/messages、/v1/files），api-key 或 account 认证；可切 pi-ai 多供应商",
+        "搜索 Exa / Perplexity / DeepSeek；hooks.json 桥接 Claude Code / Codex；遥测默认关闭，开启后经脱敏瀑布交给 otel"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,392 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Web 入口：提示词到回复的调用与失败出口",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1010,
+      1380
+    ]
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "浏览器"
+    },
+    {
+      "id": "web",
+      "type": "frontend",
+      "label": "Web Client",
+      "sublabel": "ui-conversation"
+    },
+    {
+      "id": "hostapi",
+      "type": "security",
+      "label": "Host API",
+      "sublabel": "鉴权 · RPC · Remote"
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Agent Loop",
+      "sublabel": "turn → step"
+    },
+    {
+      "id": "session",
+      "type": "database",
+      "label": "Session Log",
+      "sublabel": "append / derive"
+    },
+    {
+      "id": "llm",
+      "type": "backend",
+      "label": "LLM Seam",
+      "sublabel": "llm-deepseek"
+    },
+    {
+      "id": "deepseek",
+      "type": "external",
+      "label": "DeepSeek API",
+      "sublabel": "Messages 流式"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Tool Registry",
+      "sublabel": "web_search"
+    }
+  ],
+  "segments": [
+    {
+      "from": 168,
+      "to": 300,
+      "label": "① 提交与鉴权"
+    },
+    {
+      "from": 330,
+      "to": 460,
+      "label": "② 会话准入"
+    },
+    {
+      "from": 490,
+      "to": 620,
+      "label": "③ 开启 turn 与 pre-step 门"
+    },
+    {
+      "from": 650,
+      "to": 900,
+      "label": "④ 模型请求、失败与重试"
+    },
+    {
+      "from": 930,
+      "to": 1060,
+      "label": "⑤ 工具调用（结果不中断回合）"
+    },
+    {
+      "from": 1090,
+      "to": 1290,
+      "label": "⑥ 结算、回流、取消"
+    }
+  ],
+  "messages": [
+    {
+      "id": "user-web",
+      "from": "user",
+      "to": "web",
+      "y": 186,
+      "label": "step 1 在聊天框输入提示词",
+      "variant": "emphasis"
+    },
+    {
+      "id": "web-rpc",
+      "from": "web",
+      "to": "hostapi",
+      "y": 222,
+      "label": "step 2 把提示词作为 RPC 请求发给 Host（带签名 Cookie）",
+      "variant": "emphasis"
+    },
+    {
+      "id": "auth-fail",
+      "from": "hostapi",
+      "to": "web",
+      "y": 258,
+      "label": "step 2.1 ✗ 来源不受信任回 403，Cookie 无效回 401，到此为止",
+      "variant": "security"
+    },
+    {
+      "id": "admit",
+      "from": "hostapi",
+      "to": "agent",
+      "y": 348,
+      "label": "step 3 鉴权通过：校验会话、模型路由与附件后，把用户消息投递给 Agent",
+      "variant": "emphasis"
+    },
+    {
+      "id": "admit-fail",
+      "from": "hostapi",
+      "to": "web",
+      "y": 386,
+      "label": "step 3.1 ✗ 会话不存在 / 模型无路由 / 附件非法 / Agent 拒收",
+      "variant": "security"
+    },
+    {
+      "id": "accepted",
+      "from": "hostapi",
+      "to": "web",
+      "y": 424,
+      "label": "step 4 返回“已接受”，界面进入等待状态",
+      "variant": "return"
+    },
+    {
+      "id": "turn-start",
+      "from": "agent",
+      "to": "session",
+      "y": 508,
+      "label": "step 5 开启一个 turn：取出消息、拼装系统提示词、过 pre-step 门"
+    },
+    {
+      "id": "prestep-reject",
+      "from": "agent",
+      "to": "session",
+      "y": 546,
+      "label": "step 5.1 ✗ pre-step 拒绝：记一个空 turn 并以 blocked 结束，不请求模型",
+      "variant": "security"
+    },
+    {
+      "id": "step-start",
+      "from": "agent",
+      "to": "session",
+      "y": 584,
+      "label": "step 6 进入 step：先确定模型路由并准备调用，再把系统提示词与用户消息写入日志"
+    },
+    {
+      "id": "request",
+      "from": "agent",
+      "to": "llm",
+      "y": 668,
+      "label": "step 7 从日志推导并冻结请求，交给 LLM 接缝流式调用",
+      "variant": "emphasis"
+    },
+    {
+      "id": "http",
+      "from": "llm",
+      "to": "deepseek",
+      "y": 704,
+      "label": "step 8 适配器向 DeepSeek Messages 接口发起流式请求（SSE）",
+      "variant": "emphasis"
+    },
+    {
+      "id": "chunks",
+      "from": "deepseek",
+      "to": "llm",
+      "y": 740,
+      "label": "step 9 逐块返回推理、正文与工具调用增量",
+      "variant": "return"
+    },
+    {
+      "id": "llm-fail",
+      "from": "deepseek",
+      "to": "llm",
+      "y": 776,
+      "label": "step 9.1 ✗ 鉴权失败、无密钥、限流、服务端错误、超时或网络故障",
+      "variant": "security"
+    },
+    {
+      "id": "retry",
+      "from": "agent",
+      "to": "session",
+      "y": 814,
+      "label": "step 9.2 失败时记录本次尝试，按退避策略在同一 turn 内重跑（最多 5 次）",
+      "variant": "dashed"
+    },
+    {
+      "id": "retry-exhausted",
+      "from": "agent",
+      "to": "session",
+      "y": 852,
+      "label": "step 9.3 ✗ 重试用尽或错误不可重试：turn 以 error 结束并广播错误",
+      "variant": "security"
+    },
+    {
+      "id": "frames",
+      "from": "llm",
+      "to": "agent",
+      "y": 886,
+      "label": "step 10 成功：每个增量推给 Agent 并实时向外广播",
+      "variant": "return"
+    },
+    {
+      "id": "tool-call",
+      "from": "agent",
+      "to": "tools",
+      "y": 948,
+      "label": "step 11 模型要求联网搜索成交量：前置策略 → 审批 → 执行 → 后置检查"
+    },
+    {
+      "id": "tool-ok",
+      "from": "tools",
+      "to": "agent",
+      "y": 986,
+      "label": "step 12 搜索结果写入日志，Agent 开下一 step 再问模型",
+      "variant": "return"
+    },
+    {
+      "id": "tool-fail",
+      "from": "tools",
+      "to": "agent",
+      "y": 1024,
+      "label": "step 12.1 ✗ 被拒绝、审批不可用、超时或沙箱拒绝：只产生错误结果，回合继续",
+      "variant": "security"
+    },
+    {
+      "id": "settle",
+      "from": "agent",
+      "to": "session",
+      "y": 1108,
+      "label": "step 13 写入最终分析文本，结束 step 与 turn（completed）",
+      "variant": "emphasis"
+    },
+    {
+      "id": "follow",
+      "from": "session",
+      "to": "hostapi",
+      "y": 1146,
+      "label": "step 14 日志事件与流式增量经 follow 流推给 Host API",
+      "variant": "dashed"
+    },
+    {
+      "id": "frame-web",
+      "from": "hostapi",
+      "to": "web",
+      "y": 1184,
+      "label": "step 15 推送到浏览器：增量文本、结束原因、错误事件",
+      "variant": "return"
+    },
+    {
+      "id": "render",
+      "from": "web",
+      "to": "user",
+      "y": 1222,
+      "label": "step 16 渲染回复或错误状态",
+      "variant": "return"
+    },
+    {
+      "id": "cancel",
+      "from": "web",
+      "to": "agent",
+      "y": 1262,
+      "label": "step 17（任意时刻）✗ 用户随时可取消：turn 以 aborted 结束",
+      "variant": "security"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "web",
+      "from": 218,
+      "to": 1228,
+      "type": "frontend"
+    },
+    {
+      "participant": "hostapi",
+      "from": 222,
+      "to": 430,
+      "type": "security"
+    },
+    {
+      "participant": "hostapi",
+      "from": 1140,
+      "to": 1190,
+      "type": "security"
+    },
+    {
+      "participant": "agent",
+      "from": 348,
+      "to": 1268,
+      "type": "backend"
+    },
+    {
+      "participant": "session",
+      "from": 503,
+      "to": 1152,
+      "type": "database"
+    },
+    {
+      "participant": "llm",
+      "from": 668,
+      "to": 892,
+      "type": "backend"
+    },
+    {
+      "participant": "deepseek",
+      "from": 699,
+      "to": 782,
+      "type": "external"
+    },
+    {
+      "participant": "tools",
+      "from": 943,
+      "to": 1030,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "① 提交与鉴权 · step 1–2.1 · 方法链",
+      "items": [
+        "【packages/client/ui-conversation/src/client/service.ts:229】（ConversationController.sendSession）-> 【service.ts:293】（Session.prompt，声明于 client/runtime/lib/types/client/sessions/session.d.ts:137）-> 【packages/client/connection/src/client/rpc.ts:34】（createWebConnectionRpc.send → fetch POST /api）",
+        "【packages/client/connection/src/rpc-host.ts:187】（HostConnectionService 路由 handler）-> 【rpc-host.ts:107】（HostConnectionService.requestRejection：:109 isTrustedApiRequest 不通过 → 403）-> 【browser-auth.ts:300】（BrowserAuth.isAuthenticated 不通过 → 401）",
+        "通过后 -> 【packages/api/gateway/src/index.ts:357】（TypertGatewayService.invoke）分发到 Remote；首次进站的 token 换 Cookie 在【browser-auth.ts:250】（BrowserAuth.authorizeIndex）"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "② 会话准入 · step 3–4 · 方法链",
+      "items": [
+        "【packages/api/session-controller/src/index.ts:442】（SessionController.prompt）-> 【commands.ts:311】（SessionCommandController.prompt）-> 【commands.ts:527】（SessionCommandController.resolveAgent）-> 【agent.ts:170】（ApiSessionAgentController.resolveAgent，找不到 → session/not-found）",
+        "【commands.ts:381】（模型无路由 → session/model-unavailable）-> 【commands.ts:354】（ctx.attachments.admitPromptContent → session/attachment-invalid）-> 【commands.ts:365】（agent.followup(message)，抛错 → :372 session/agent-busy）",
+        "重复提交：【commands.ts:330】（hasPromptRequest 命中同一 requestId 直接返回 accepted）"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "③ 开启 turn · step 5–6 · 方法链",
+      "items": [
+        "【packages/core/agent-loop/src/agent.ts:163】（ReactLoopAgent.followup）-> 【agent.ts:154】（ReactLoopAgent.send）-> 【agent.ts:214】（ReactLoopAgent.wakeDriver）-> 【agent.ts:252】（ReactLoopAgent.kick）-> 【agent.ts:298】（ReactLoopAgent.turn，:307 append turn/start）",
+        "【agent.ts:267】（ReactLoopAgent.preStep：inbox.claim）-> 【packages/core/system-prompt/src/index.ts:610】（SystemPrompt.assemble）-> 【agent.ts:275】（agent/pre-step 瀑布）；reject -> 【agent.ts:320】（turn/end blocked）",
+        "enter -> 【agent.ts:400】（ReactLoopAgent.step，:331 append step/start）-> 【agent.ts:564】（ReactLoopAgent.prepareRequest：:594 agent/request 瀑布 → :604 ctx.llm.prepareCall）-> 【agent.ts:423】（append system/message）-> 【agent.ts:434】（append user/message）。新版先准备调用再提交消息，取消时两者都不落日志"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "④ 模型请求与重试 · step 7–10 · 方法链",
+      "items": [
+        "【agent.ts:616】（ReactLoopAgent.buildRequest，:688 Session.deriveMessages 冻结历史，定义于 packages/core/session/src/index.ts:984）-> 【agent.ts:453】（preparedCall.stream 或 ctx.llm.stream）-> 【packages/llm/llm/src/index.ts:1143】（LlmRuntime.stream，llm/stream 瀑布）-> 【packages/llm/llm-deepseek/src/adapter.ts:47】（DeepSeekAdapter.stream）-> 【adapter.ts:51】（DeepSeekAdapter.generate）-> 【adapter.ts:77】（DeepSeekAdapter.request，:84 resolveAuth；无密钥由 llm-deepseek-api-key/src/index.ts:33 抛 MISSING_CREDENTIAL）-> 【adapter.ts:124】（fetch POST {baseURL}/v1/messages，SSE）",
+        "失败：【agent.ts:486/492/509】（append assistant/attempt）-> 【agent.ts:512】（agent/request-error 瀑布）-> 【packages/llm/llm-retry/src/index.ts:194】（recover：:188 append llm/retry 后退避，:223 超过 maxRetries 交给 next）-> 【agent.ts:524】（throw LlmError）-> 【agent.ts:378】（turn/end error）-> 【agent.ts:248】（emit agent/error）。重试在同一 step 内重新 prepareCall，不重复 pre-step 与用户消息提交",
+        "成功：【agent.ts:455–459】（for await chunk → AssistantStreamAttempt.push → :449 emit agent/assistant-stream）"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "⑤ 工具调用 · step 11–12.1 · 方法链",
+      "items": [
+        "【agent.ts:551】（executeToolCalls）-> 【packages/core/agent-loop/src/tool-calls.ts:60】（executeToolCalls，:170 scheduler.prepare，:153 finalize）-> 【packages/core/tools/src/index.ts:1499】（ToolRuntime.prepareExecution，:1512 tools/pre-execute 瀑布）-> 【index.ts:1733】（ToolRuntime.serviceAsk，:1750 approval.request）",
+        "允许后 -> 【index.ts:1379】（ToolRuntime.completeScheduledExecution，:1612 tools/execute 瀑布）-> 【index.ts:1570】（ToolRuntime.dispatchToolBody）-> 【packages/web/tool-web/src/search.ts:365】（web_search.execute → ctx.web.search）-> 【index.ts:1443】（新增 projectContent 投影内容）-> 【index.ts:1789】（tools/post-execute 瀑布）-> 【index.ts:1710】（emit tools/result）",
+        "结算：【agent.ts:539】（append assistant/message）-> 【agent.ts:358】（append step/end）-> 【agent.ts:387】（append turn/end completed）"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "⑥ 回流与取消 · step 13–17 · 方法链",
+      "items": [
+        "【packages/api/session-controller/src/index.ts:496】（SessionController.follow）-> 【history.ts:120】（SessionHistoryController.follow，:146 监听 session/event，:167 监听 agent/assistant-stream）-> 【packages/api/gateway/src/stream-server.ts:43】（RemoteStreamMuxServer 推流到浏览器）",
+        "错误广播：【session-controller/src/index.ts:191】（agent/error → emit api-session/error）；结束原因随 turn/end 事件到达",
+        "取消：【index.ts:473】（SessionController.cancel）-> 【commands.ts:511】（SessionCommandController.cancel → agent.cancel）-> 【agent.ts:175】（ReactLoopAgent.cancel）-> 【agent.ts:372】（turn/end aborted）"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,359 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "CLI 入口：headless 任务到退出码的调用与失败出口",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1010,
+      1300
+    ]
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "终端"
+    },
+    {
+      "id": "cli",
+      "type": "frontend",
+      "label": "dsh headless",
+      "sublabel": "runner"
+    },
+    {
+      "id": "agent",
+      "type": "backend",
+      "label": "Agent Loop",
+      "sublabel": "turn → step"
+    },
+    {
+      "id": "session",
+      "type": "database",
+      "label": "Session Log",
+      "sublabel": "append / derive"
+    },
+    {
+      "id": "llm",
+      "type": "backend",
+      "label": "LLM Seam",
+      "sublabel": "llm-deepseek"
+    },
+    {
+      "id": "deepseek",
+      "type": "external",
+      "label": "DeepSeek API",
+      "sublabel": "Messages 流式"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "Tool Registry",
+      "sublabel": "web_search"
+    }
+  ],
+  "segments": [
+    {
+      "from": 168,
+      "to": 300,
+      "label": "① 启动与创建 Agent（无网关、无鉴权）"
+    },
+    {
+      "from": 330,
+      "to": 460,
+      "label": "② 开启 turn 与 pre-step 门"
+    },
+    {
+      "from": 490,
+      "to": 740,
+      "label": "③ 模型请求、失败与重试"
+    },
+    {
+      "from": 770,
+      "to": 900,
+      "label": "④ 工具调用（结果不中断回合）"
+    },
+    {
+      "from": 930,
+      "to": 1210,
+      "label": "⑤ 结算、退出码、中断"
+    }
+  ],
+  "messages": [
+    {
+      "id": "user-cli",
+      "from": "user",
+      "to": "cli",
+      "y": 186,
+      "label": "step 1 在终端以 headless 模式运行任务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "create",
+      "from": "cli",
+      "to": "agent",
+      "y": 222,
+      "label": "step 2 启动 profile 插件树，创建（或按 sessionId 恢复）Agent 并投递任务",
+      "variant": "emphasis"
+    },
+    {
+      "id": "boot-fail",
+      "from": "cli",
+      "to": "user",
+      "y": 258,
+      "label": "step 2.1 ✗ 启动或创建失败：报错并 exit 1",
+      "variant": "security"
+    },
+    {
+      "id": "reasoning",
+      "from": "agent",
+      "to": "cli",
+      "y": 290,
+      "label": "step 2.2（伴随） 推理增量实时写到 stderr",
+      "variant": "dashed"
+    },
+    {
+      "id": "turn-start",
+      "from": "agent",
+      "to": "session",
+      "y": 348,
+      "label": "step 3 开启一个 turn：取出消息、拼装系统提示词、过 pre-step 门"
+    },
+    {
+      "id": "prestep-reject",
+      "from": "agent",
+      "to": "session",
+      "y": 386,
+      "label": "step 3.1 ✗ pre-step 拒绝：记一个空 turn 并以 blocked 结束，不请求模型",
+      "variant": "security"
+    },
+    {
+      "id": "step-start",
+      "from": "agent",
+      "to": "session",
+      "y": 424,
+      "label": "step 4 进入 step：先确定模型路由并准备调用，再把系统提示词与用户消息写入日志"
+    },
+    {
+      "id": "request",
+      "from": "agent",
+      "to": "llm",
+      "y": 508,
+      "label": "step 5 从日志推导并冻结请求，交给 LLM 接缝流式调用",
+      "variant": "emphasis"
+    },
+    {
+      "id": "http",
+      "from": "llm",
+      "to": "deepseek",
+      "y": 544,
+      "label": "step 6 适配器向 DeepSeek Messages 接口发起流式请求（SSE）",
+      "variant": "emphasis"
+    },
+    {
+      "id": "chunks",
+      "from": "deepseek",
+      "to": "llm",
+      "y": 580,
+      "label": "step 7 逐块返回推理、正文与工具调用增量",
+      "variant": "return"
+    },
+    {
+      "id": "llm-fail",
+      "from": "deepseek",
+      "to": "llm",
+      "y": 616,
+      "label": "step 7.1 ✗ 无 API 密钥、鉴权失败、限流、服务端错误、超时或网络故障",
+      "variant": "security"
+    },
+    {
+      "id": "retry",
+      "from": "agent",
+      "to": "session",
+      "y": 654,
+      "label": "step 7.2 失败时记录本次尝试，按退避策略在同一 turn 内重跑（最多 5 次）",
+      "variant": "dashed"
+    },
+    {
+      "id": "retry-exhausted",
+      "from": "agent",
+      "to": "session",
+      "y": 692,
+      "label": "step 7.3 ✗ 重试用尽或错误不可重试：turn 以 error 结束",
+      "variant": "security"
+    },
+    {
+      "id": "frames",
+      "from": "llm",
+      "to": "agent",
+      "y": 726,
+      "label": "step 8 成功：每个增量推给 Agent 并实时广播",
+      "variant": "return"
+    },
+    {
+      "id": "tool-call",
+      "from": "agent",
+      "to": "tools",
+      "y": 788,
+      "label": "step 9 模型要求联网搜索成交量：前置策略 → 审批 → 执行 → 后置检查"
+    },
+    {
+      "id": "tool-ok",
+      "from": "tools",
+      "to": "agent",
+      "y": 826,
+      "label": "step 10 搜索结果写入日志，Agent 开下一 step 再问模型",
+      "variant": "return"
+    },
+    {
+      "id": "tool-fail",
+      "from": "tools",
+      "to": "agent",
+      "y": 864,
+      "label": "step 10.1 ✗ 被拒绝、无人审批、超时或沙箱拒绝：只产生错误结果，回合继续",
+      "variant": "security"
+    },
+    {
+      "id": "settle",
+      "from": "agent",
+      "to": "session",
+      "y": 948,
+      "label": "step 11 写入最终分析文本，结束 step 与 turn（completed）",
+      "variant": "emphasis"
+    },
+    {
+      "id": "idle",
+      "from": "agent",
+      "to": "cli",
+      "y": 986,
+      "label": "step 12 Agent 空闲且子代理都已结束，runner 继续",
+      "variant": "return"
+    },
+    {
+      "id": "summarize",
+      "from": "cli",
+      "to": "session",
+      "y": 1024,
+      "label": "step 13 刷盘后从日志汇总最后一条回复文本与 turn 结束原因"
+    },
+    {
+      "id": "stdout",
+      "from": "cli",
+      "to": "user",
+      "y": 1062,
+      "label": "step 14 打印结果到 stdout，exit 0",
+      "variant": "return"
+    },
+    {
+      "id": "exit1",
+      "from": "cli",
+      "to": "user",
+      "y": 1100,
+      "label": "step 14.1 ✗ 非 completed 结束：exit 1",
+      "variant": "security"
+    },
+    {
+      "id": "sigint",
+      "from": "user",
+      "to": "cli",
+      "y": 1140,
+      "label": "step 15 ✗ Ctrl+C（任意时刻）：树释放，turn aborted",
+      "variant": "security"
+    },
+    {
+      "id": "interrupted",
+      "from": "agent",
+      "to": "session",
+      "y": 1180,
+      "label": "step 16（崩溃场景） 硬崩溃留下无结尾的 turn，下次恢复时补记 interrupted",
+      "variant": "dashed"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "cli",
+      "from": 186,
+      "to": 1146,
+      "type": "frontend"
+    },
+    {
+      "participant": "agent",
+      "from": 222,
+      "to": 992,
+      "type": "backend"
+    },
+    {
+      "participant": "session",
+      "from": 343,
+      "to": 1030,
+      "type": "database"
+    },
+    {
+      "participant": "llm",
+      "from": 508,
+      "to": 732,
+      "type": "backend"
+    },
+    {
+      "participant": "deepseek",
+      "from": 539,
+      "to": 622,
+      "type": "external"
+    },
+    {
+      "participant": "tools",
+      "from": 783,
+      "to": 870,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "① 启动与创建 Agent · step 1–2.2 · 方法链",
+      "items": [
+        "【apps/cli/src/bin.ts:32】（case 'profile' → runProfile）-> 【apps/cli/src/profile-boot.ts:244】（runProfile，:296 boot）-> 【packages/boot/app-boot/src/index.ts:975】（boot：按 profile 叠加 bundle 与补丁挂载插件树）-> 【packages/bundle/headless/src/index.ts:411】（apply）",
+        "【headless/src/index.ts:311】（run：:314 loader.await）-> 【index.ts:348】（AgentRegistry.create，定义于 packages/core/agent/src/index.ts:391；给了 sessionId 则改走 resolveAgent 恢复）-> 【index.ts:355】（agent.whenIdle）-> 【index.ts:375】（agent.followup(createUserMessage(task))）",
+        "失败：【index.ts:319】（agents / defaultModel / sessions 缺失 → return）；【index.ts:297】（fail：stderr 或 --json 时 stdout 一行 error，:301 exit 1）；推理输出：【index.ts:109】（streamReasoning 监听 agent/assistant-stream，--json 时改由 projectJsonRun 输出）"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "② 开启 turn · step 3–4 · 方法链",
+      "items": [
+        "【packages/core/agent-loop/src/agent.ts:163】（ReactLoopAgent.followup）-> 【agent.ts:154】（ReactLoopAgent.send）-> 【agent.ts:214】（ReactLoopAgent.wakeDriver）-> 【agent.ts:252】（ReactLoopAgent.kick）-> 【agent.ts:298】（ReactLoopAgent.turn，:307 append turn/start）",
+        "【agent.ts:267】（ReactLoopAgent.preStep：inbox.claim）-> 【packages/core/system-prompt/src/index.ts:610】（SystemPrompt.assemble）-> 【agent.ts:275】（agent/pre-step 瀑布）；reject -> 【agent.ts:320】（turn/end blocked）",
+        "enter -> 【agent.ts:400】（ReactLoopAgent.step，:331 append step/start）-> 【agent.ts:564】（ReactLoopAgent.prepareRequest：:594 agent/request 瀑布 → :604 ctx.llm.prepareCall）-> 【agent.ts:423】（append system/message）-> 【agent.ts:434】（append user/message）"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "③ 模型请求与重试 · step 5–8 · 方法链",
+      "items": [
+        "【agent.ts:616】（ReactLoopAgent.buildRequest，:688 Session.deriveMessages 冻结历史）-> 【agent.ts:453】（preparedCall.stream 或 ctx.llm.stream）-> 【packages/llm/llm/src/index.ts:1143】（LlmRuntime.stream）-> 【packages/llm/llm-deepseek/src/adapter.ts:47】（DeepSeekAdapter.stream）-> 【adapter.ts:51】（DeepSeekAdapter.generate）-> 【adapter.ts:77】（DeepSeekAdapter.request，:84 resolveAuth；无 DEEPSEEK_API_KEY 由 llm-deepseek-api-key/src/index.ts:33 抛 MISSING_CREDENTIAL）-> 【adapter.ts:124】（fetch POST {baseURL}/v1/messages，SSE）",
+        "失败：【agent.ts:486/492/509】（append assistant/attempt）-> 【agent.ts:512】（agent/request-error 瀑布）-> 【packages/llm/llm-retry/src/index.ts:194】（recover：:188 append llm/retry 后退避，:223 超过 maxRetries 交给 next）-> 【agent.ts:524】（throw LlmError）-> 【agent.ts:378】（turn/end error）",
+        "成功：【agent.ts:455–459】（for await chunk → AssistantStreamAttempt.push → :449 emit agent/assistant-stream）"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "④ 工具调用 · step 9–10.1 · 方法链",
+      "items": [
+        "【agent.ts:551】（executeToolCalls）-> 【packages/core/agent-loop/src/tool-calls.ts:60】（executeToolCalls）-> 【packages/core/tools/src/index.ts:1499】（ToolRuntime.prepareExecution，:1512 tools/pre-execute 瀑布）-> 【index.ts:1733】（ToolRuntime.serviceAsk，:1750 approval.request；headless 无答复者 → unavailable）",
+        "允许后 -> 【index.ts:1379】（ToolRuntime.completeScheduledExecution，:1612 tools/execute 瀑布）-> 【index.ts:1570】（ToolRuntime.dispatchToolBody）-> 【packages/web/tool-web/src/search.ts:365】（web_search.execute → ctx.web.search）-> 【index.ts:1443】（projectContent 投影内容）-> 【index.ts:1789】（tools/post-execute 瀑布）-> 【index.ts:1710】（emit tools/result）",
+        "结算：【agent.ts:539】（append assistant/message）-> 【agent.ts:358】（append step/end）-> 【agent.ts:387】（append turn/end completed）"
+      ]
+    },
+    {
+      "dot": "slate",
+      "title": "⑤ 结算与退出码 · step 11–16 · 方法链",
+      "items": [
+        "【headless/src/index.ts:381】（agent.whenIdle 循环，等 subagents.waitForChildren 结束）-> 【index.ts:390】（sessions.flush）-> 【index.ts:392】（summarize，定义于 :73：扫描 assistant/message 与 turn/end）-> 【index.ts:393】（stdout 写文本，--json 时 projection.finish）-> 【index.ts:398】（io.exit：completed → 0，否则 1；error 先在 :396 写 stderr）",
+        "Ctrl+C：【apps/cli/src/process-shutdown.ts:22】（createProcessShutdown → dispose 整棵树）-> 【agent.ts:175】（ReactLoopAgent.cancel）-> 【agent.ts:372】（turn/end aborted）",
+        "硬崩溃：日志无 turn/end；恢复时按【packages/core/session/src/types.ts:221】（TurnEndReasonMap.interrupted）补记"
+      ]
+    }
+  ]
+}
