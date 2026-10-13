@@ -1,0 +1,390 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "股市成交量分析：一轮 session 的 context 处理",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1010,
+      1480
+    ]
+  },
+  "participants": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户",
+      "sublabel": "Web / CLI"
+    },
+    {
+      "id": "loop",
+      "type": "backend",
+      "label": "Agent Loop",
+      "sublabel": "turn → step"
+    },
+    {
+      "id": "log",
+      "type": "database",
+      "label": "Session Log",
+      "sublabel": "append-only"
+    },
+    {
+      "id": "meter",
+      "type": "backend",
+      "label": "Token Meter",
+      "sublabel": "只回放日志"
+    },
+    {
+      "id": "compact",
+      "type": "backend",
+      "label": "Compaction",
+      "sublabel": "basic + pruner"
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "DeepSeek",
+      "sublabel": "Messages 流式"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "web_search",
+      "sublabel": "Tool Registry"
+    }
+  ],
+  "segments": [
+    {
+      "from": 168,
+      "to": 300,
+      "label": "Turn 1 · 开启与首次请求（seq 0–6）"
+    },
+    {
+      "from": 330,
+      "to": 520,
+      "label": "Turn 1 · step 1：模型要求搜索（seq 7–10）"
+    },
+    {
+      "from": 550,
+      "to": 730,
+      "label": "Turn 1 · step 2：给出分析（seq 11–14）"
+    },
+    {
+      "from": 762,
+      "to": 1100,
+      "label": "Turn 7 · 历史 104k 触发压缩（seq 60–68）"
+    },
+    {
+      "from": 1130,
+      "to": 1400,
+      "label": "持久化与崩溃恢复"
+    }
+  ],
+  "messages": [
+    {
+      "id": "m1",
+      "from": "user",
+      "to": "loop",
+      "y": 186,
+      "label": "step 1 输入成交量分析任务 → followup()",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m2",
+      "from": "loop",
+      "to": "log",
+      "y": 222,
+      "label": "step 2 seq 0 turn/start；preStep 取消息、组装提示词、过 pre-step 门"
+    },
+    {
+      "id": "m3",
+      "from": "loop",
+      "to": "llm",
+      "y": 258,
+      "label": "step 3 agent/request → prepareCall 取路由能力（不写日志）",
+      "variant": "dashed"
+    },
+    {
+      "id": "m4",
+      "from": "loop",
+      "to": "log",
+      "y": 294,
+      "label": "step 4 seq 2–5：system#0 · user · runtime-ctx · header",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m5",
+      "from": "log",
+      "to": "loop",
+      "y": 348,
+      "label": "step 5 deriveMessages() → [system, user, runtime-context] 冻结",
+      "variant": "return"
+    },
+    {
+      "id": "m6",
+      "from": "loop",
+      "to": "llm",
+      "y": 384,
+      "label": "step 6 请求 #1：3 条消息 + 工具 schema（约 3.4k tokens）",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m7",
+      "from": "llm",
+      "to": "loop",
+      "y": 420,
+      "label": "step 7 thinking + tool_use web_search(\"2026-10-13 A股 两市成交额\")",
+      "variant": "return"
+    },
+    {
+      "id": "m8",
+      "from": "loop",
+      "to": "log",
+      "y": 456,
+      "label": "step 8 seq 7 assistant/message（内嵌完整流）· seq 8 tool/call 先落盘"
+    },
+    {
+      "id": "m9",
+      "from": "loop",
+      "to": "tools",
+      "y": 492,
+      "label": "step 9 executeToolCalls：pre-execute → 执行 → projectContent → post-execute"
+    },
+    {
+      "id": "m10",
+      "from": "tools",
+      "to": "log",
+      "y": 568,
+      "label": "step 10 seq 9 tool/result（tool 角色消息，1.9k tokens 未触发 spill）",
+      "variant": "return"
+    },
+    {
+      "id": "m11",
+      "from": "loop",
+      "to": "log",
+      "y": 604,
+      "label": "step 11 seq 10 step/end · seq 11 step/start · seq 12 assistant 待写（不重复 pre-step）"
+    },
+    {
+      "id": "m12",
+      "from": "loop",
+      "to": "llm",
+      "y": 640,
+      "label": "step 12 请求 #2：5 条消息，前缀字节相同 → 缓存命中；header 相等不重记",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m13",
+      "from": "llm",
+      "to": "loop",
+      "y": 676,
+      "label": "step 13 text“今日沪深两市成交额 1.92 万亿元，较昨日放量 8%…”end_turn",
+      "variant": "return"
+    },
+    {
+      "id": "m14",
+      "from": "loop",
+      "to": "user",
+      "y": 712,
+      "label": "step 14 turn/end → 回流给用户",
+      "variant": "return"
+    },
+    {
+      "id": "m15",
+      "from": "user",
+      "to": "loop",
+      "y": 796,
+      "label": "step 15 输入“再对比港股”（历史已 104k）",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m16",
+      "from": "loop",
+      "to": "meter",
+      "y": 832,
+      "label": "step 16 pre-step 串行监听：计价最新请求信封"
+    },
+    {
+      "id": "m17",
+      "from": "meter",
+      "to": "compact",
+      "y": 868,
+      "label": "step 17 104k > 阈值 56k（floor(min(W×0.8, W−O−64k))）→ 触发",
+      "variant": "security"
+    },
+    {
+      "id": "m18",
+      "from": "compact",
+      "to": "log",
+      "y": 904,
+      "label": "step 18 seq 61 compaction/start（持久锁）；pruner 先裁超长 tool/result",
+      "variant": "security"
+    },
+    {
+      "id": "m19",
+      "from": "compact",
+      "to": "llm",
+      "y": 940,
+      "label": "step 19 辅助摘要请求：原字节重放 system + seq 3..52 + 固定指令（复用前缀缓存）",
+      "variant": "dashed"
+    },
+    {
+      "id": "m20",
+      "from": "llm",
+      "to": "compact",
+      "y": 976,
+      "label": "step 20 摘要 1.1k tokens（必须比源区间短，否则拒绝）",
+      "variant": "return"
+    },
+    {
+      "id": "m21",
+      "from": "compact",
+      "to": "log",
+      "y": 1012,
+      "label": "step 21 seq 62 summary · seq 63 user/message replace 3..52（sourceEventSeqs）· seq 64 end",
+      "variant": "security"
+    },
+    {
+      "id": "m22",
+      "from": "loop",
+      "to": "log",
+      "y": 1048,
+      "label": "step 22 seq 65–68 新 step · 用户消息 · header series"
+    },
+    {
+      "id": "m23",
+      "from": "loop",
+      "to": "llm",
+      "y": 1084,
+      "label": "step 23 请求 #N：[system#0, 摘要, 最近 16% 原文, 新问题] ≈ 22k tokens",
+      "variant": "emphasis"
+    },
+    {
+      "id": "m24",
+      "from": "loop",
+      "to": "log",
+      "y": 1176,
+      "label": "step 24 zstd 帧 + fsync；checkpoint 三处落盘",
+      "variant": "dashed"
+    },
+    {
+      "id": "m25",
+      "from": "loop",
+      "to": "log",
+      "y": 1230,
+      "label": "step 24.1 ✗ 崩溃：只留 assistant/attempt",
+      "variant": "security"
+    },
+    {
+      "id": "m26",
+      "from": "log",
+      "to": "loop",
+      "y": 1284,
+      "label": "step 25 resume：补 interrupted → 重 fold → 同一 Message[]",
+      "variant": "return"
+    },
+    {
+      "id": "m27",
+      "from": "loop",
+      "to": "user",
+      "y": 1338,
+      "label": "step 26 UI / 统计 / 遥测 / fork 读同一份日志",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "loop",
+      "from": 186,
+      "to": 718,
+      "type": "backend"
+    },
+    {
+      "participant": "loop",
+      "from": 796,
+      "to": 1090,
+      "type": "backend"
+    },
+    {
+      "participant": "log",
+      "from": 222,
+      "to": 1024,
+      "type": "database"
+    },
+    {
+      "participant": "llm",
+      "from": 379,
+      "to": 426,
+      "type": "external"
+    },
+    {
+      "participant": "llm",
+      "from": 635,
+      "to": 682,
+      "type": "external"
+    },
+    {
+      "participant": "llm",
+      "from": 935,
+      "to": 982,
+      "type": "external"
+    },
+    {
+      "participant": "tools",
+      "from": 487,
+      "to": 574,
+      "type": "backend"
+    },
+    {
+      "participant": "meter",
+      "from": 827,
+      "to": 874,
+      "type": "backend"
+    },
+    {
+      "participant": "compact",
+      "from": 868,
+      "to": 1018,
+      "type": "backend"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "设计思路一：日志是唯一事实来源",
+      "items": [
+        "模型可见 ⟺ 已记录：系统提示词（seq 2）、用户消息、runtime-context、request/header 全部是事件；Session.append() 在源头拒绝不可序列化数据",
+        "结构性事件（turn/step、assistant/attempt、llm/retry）不进历史；空内容 assistant 也跳过",
+        "请求从日志派生并冻结（agent.ts:616 buildRequest → session.deriveMessages），任何插件要改模型看到的内容只能追加新事件"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "设计思路二：替换而非改写",
+      "items": [
+        "压缩结果是一条带 surfaceOp: replace 与 sourceEventSeqs 的新 user/message，原文 seq 3..52 仍在日志中只是被遮蔽",
+        "范围永远从第一个非 system 节点开始，节点 0 的提示词从不被遮蔽；in-history 路由上提示词变化只追加新 system 节点",
+        "compaction/start 本身就是持久锁；摘要不比源短就拒绝；失败故意留下未闭合的 start 阻塞后续压缩"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "设计思路三：对前缀缓存友好",
+      "items": [
+        "step 12 的请求 #2 与请求 #1 前缀字节相同，DeepSeek 报 cache_read；header 用 headerEquals 比较相等就不重记",
+        "摘要请求刻意按原字节重放 system 与被遮蔽区间，只有尾部指令和摘要输出未命中",
+        "替换事件之后用 request/header reason: series 开新系列，缓存失效点精确到 seq 63"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "执行过程里的数字（示例值）",
+      "items": [
+        "请求 #1 约 3.4k tokens，请求 #2 约 5.5k；Turn 7 前历史 104k，阈值 56k = floor(min(128k×0.8, 128k−8k−64k))",
+        "保留最新 16%·(W−O) 原文，摘要 1.1k，压缩后请求 #N 约 22k",
+        "Token Meter 不调模型，只回放日志做确定性估算，压缩、占用显示、遥测共用同一结果"
+      ]
+    }
+  ]
+}

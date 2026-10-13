@@ -1,0 +1,387 @@
+{
+  "schema_version": 1,
+  "diagram_type": "dataflow",
+  "meta": {
+    "title": "Context 数据流：从输入到模型请求再写回",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1080,
+      760
+    ]
+  },
+  "stages": [
+    {
+      "label": "来源"
+    },
+    {
+      "label": "写入"
+    },
+    {
+      "label": "唯一事实来源"
+    },
+    {
+      "label": "投影与计价"
+    },
+    {
+      "label": "消费"
+    }
+  ],
+  "nodes": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "用户输入",
+      "sublabel": "成交量分析",
+      "stage": 0,
+      "row": 0,
+      "tag": "user/message"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "工具结果",
+      "sublabel": "web_search",
+      "stage": 0,
+      "row": 2,
+      "tag": "tool/result"
+    },
+    {
+      "id": "model_out",
+      "type": "external",
+      "label": "模型输出",
+      "sublabel": "流式 chunk",
+      "stage": 0,
+      "row": 4,
+      "tag": "assistant/message"
+    },
+    {
+      "id": "loop",
+      "type": "backend",
+      "label": "Agent Loop",
+      "sublabel": "append()",
+      "stage": 1,
+      "row": 1,
+      "tag": "append"
+    },
+    {
+      "id": "compact",
+      "type": "backend",
+      "label": "Compaction",
+      "sublabel": "pruner + 摘要",
+      "stage": 1,
+      "row": 3,
+      "tag": "replace 3..52"
+    },
+    {
+      "id": "log",
+      "type": "database",
+      "label": "Session Log",
+      "sublabel": "seq 连续·不改写",
+      "stage": 2,
+      "row": 1,
+      "tag": "append-only"
+    },
+    {
+      "id": "jsonl",
+      "type": "database",
+      "label": "JSONL / SQLite",
+      "sublabel": "zstd 帧 + fsync",
+      "stage": 2,
+      "row": 3,
+      "tag": "checkpoint"
+    },
+    {
+      "id": "fold",
+      "type": "backend",
+      "label": "Surface fold",
+      "sublabel": "deriveMessages()",
+      "stage": 3,
+      "row": 1,
+      "tag": "节点 0 = 提示词"
+    },
+    {
+      "id": "meter",
+      "type": "backend",
+      "label": "Token Meter",
+      "sublabel": "回放日志估算",
+      "stage": 3,
+      "row": 3,
+      "tag": "不调模型"
+    },
+    {
+      "id": "llm",
+      "type": "external",
+      "label": "DeepSeek",
+      "sublabel": "/v1/messages",
+      "stage": 4,
+      "row": 1,
+      "tag": "前缀缓存"
+    },
+    {
+      "id": "ui",
+      "type": "frontend",
+      "label": "Web / CLI / 遥测",
+      "sublabel": "从事件投影",
+      "stage": 4,
+      "row": 3,
+      "tag": "follow / summarize"
+    }
+  ],
+  "flows": [
+    {
+      "id": "f1",
+      "from": "user",
+      "to": "loop",
+      "label": "seq 3 用户消息",
+      "classification": "surfaceOp: append",
+      "variant": "emphasis",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          190,
+          157
+        ],
+        [
+          190,
+          271
+        ]
+      ],
+      "labelAt": [
+        190,
+        205
+      ]
+    },
+    {
+      "id": "f2",
+      "from": "tools",
+      "to": "loop",
+      "label": "seq 9 工具结果",
+      "classification": "tool 角色消息",
+      "variant": "default",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          215,
+          385
+        ],
+        [
+          215,
+          271
+        ]
+      ],
+      "labelAt": [
+        140,
+        300
+      ]
+    },
+    {
+      "id": "f3",
+      "from": "model_out",
+      "to": "loop",
+      "label": "seq 7 / 12 assistant",
+      "classification": "内嵌完整流",
+      "variant": "default",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          240,
+          613
+        ],
+        [
+          240,
+          271
+        ]
+      ],
+      "labelAt": [
+        240,
+        560
+      ]
+    },
+    {
+      "id": "f4",
+      "from": "loop",
+      "to": "log",
+      "label": "seq 2 system · 5 header · 消息",
+      "classification": "模型可见 ⟺ 已记录",
+      "variant": "emphasis",
+      "labelAt": [
+        470,
+        188
+      ],
+      "fromSide": "right",
+      "toSide": "top",
+      "via": [
+        [
+          410,
+          271
+        ],
+        [
+          410,
+          200
+        ],
+        [
+          530,
+          200
+        ]
+      ]
+    },
+    {
+      "id": "f5",
+      "from": "compact",
+      "to": "log",
+      "label": "seq 61–64 压缩事件",
+      "classification": "sourceEventSeqs 引用原文",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left",
+      "labelAt": [
+        395,
+        420
+      ],
+      "via": [
+        [
+          445,
+          499
+        ],
+        [
+          445,
+          271
+        ]
+      ]
+    },
+    {
+      "id": "f6",
+      "from": "log",
+      "to": "jsonl",
+      "label": "每批 append 一帧",
+      "classification": "fsync 后才返回",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "route": "straight",
+      "labelAt": [
+        560,
+        400
+      ]
+    },
+    {
+      "id": "f7",
+      "from": "log",
+      "to": "fold",
+      "label": "读取事件",
+      "classification": "replace 遮蔽 3..52",
+      "variant": "emphasis",
+      "labelAt": [
+        638,
+        218
+      ],
+      "route": "straight"
+    },
+    {
+      "id": "f8",
+      "from": "log",
+      "to": "meter",
+      "label": "计价",
+      "classification": "确定性",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          650,
+          271
+        ],
+        [
+          650,
+          499
+        ]
+      ],
+      "labelAt": [
+        650,
+        390
+      ]
+    },
+    {
+      "id": "f9",
+      "from": "fold",
+      "to": "llm",
+      "label": "Message[] + 工具 schema",
+      "classification": "请求 #1 3.4k → #N 22k",
+      "variant": "emphasis",
+      "labelAt": [
+        853,
+        218
+      ],
+      "route": "straight"
+    },
+    {
+      "id": "f10",
+      "from": "meter",
+      "to": "ui",
+      "label": "占用 / 压力",
+      "classification": "共用结果",
+      "variant": "dashed",
+      "labelAt": [
+        853,
+        456
+      ],
+      "route": "straight"
+    },
+    {
+      "id": "f11",
+      "from": "jsonl",
+      "to": "ui",
+      "label": "session/event 回放",
+      "classification": "历史 · 统计 · fork",
+      "variant": "default",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "labelAt": [
+        745,
+        588
+      ],
+      "via": [
+        [
+          530,
+          600
+        ],
+        [
+          960,
+          600
+        ]
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "amber",
+      "title": "两条回流（图中未画线）",
+      "items": [
+        "DeepSeek 的流式输出经 Agent Loop 写回日志成 assistant/message（左侧“模型输出”节点就是这条回流的起点）",
+        "Token Meter 的压力超过阈值时在 agent/pre-step 唤起 Compaction；供应商报 CONTEXT_WINDOW_EXCEEDED 时在 agent/request-error 唤起并同 step 重试"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "为什么这样设计",
+      "items": [
+        "可回放：重放整条日志确定性复现压缩后的对话；fork、resume、转录、遥测没有第二份状态",
+        "可审计：被遮蔽的原文永远在日志里，替换事件带 sourceEventSeqs，日志只追加不改写",
+        "缓存友好：历史增长是纯追加；替换只让缓存从被遮蔽的第一个 token 起失效"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "旁路与边界",
+      "items": [
+        "Spill：超大工具输出存会话私有文件，模型只拿头尾与路径；图片超预算时 image-offload 永久替换为文本路径",
+        "Checkpoint 三个落盘点 fail-closed：模型请求前、工具副作用前、下一 step 前",
+        "格式 v0→v4 相邻迁移，旧文件不改名不删除；v4 起 tool 结果是独立角色消息"
+      ]
+    }
+  ]
+}
