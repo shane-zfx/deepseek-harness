@@ -4,7 +4,8 @@
   "meta": {
     "title": "DeepSeek Harness 工具调用流水线",
     "locale": "zh-CN",
-    "quality_profile": "showcase"
+    "quality_profile": "showcase",
+    "output": "dsh-tool-call-workflow.html"
   },
   "lanes": [
     {
@@ -223,9 +224,21 @@
       "col": 5,
       "type": "database",
       "label": "记录 tool/result",
-      "sublabel": "遥测 emit · isError 记 error",
+      "sublabel": "isError 记 error",
       "width": 140,
-      "height": 72
+      "height": 72,
+      "yOffset": -46
+    },
+    {
+      "id": "telemetry",
+      "lane": "observe",
+      "col": 5,
+      "type": "messagebus",
+      "label": "遥测 emit",
+      "sublabel": "脱敏瀑布后交给 otel",
+      "width": 140,
+      "height": 72,
+      "yOffset": 46
     }
   ],
   "edges": [
@@ -235,7 +248,9 @@
       "to": "pre_execute",
       "label": "进入瀑布",
       "variant": "emphasis",
-      "role": "main"
+      "role": "main",
+      "fromSide": "right",
+      "toSide": "left"
     },
     {
       "id": "pre-approval",
@@ -278,7 +293,9 @@
       "from": "tool_call",
       "to": "card_pending",
       "label": "presentCall",
-      "role": "branch"
+      "role": "branch",
+      "fromSide": "top",
+      "toSide": "bottom"
     },
     {
       "id": "call-log",
@@ -326,7 +343,9 @@
       "to": "normalize",
       "label": "超时 / 抛错 / [sandbox: denied]",
       "variant": "security",
-      "role": "error"
+      "role": "error",
+      "fromSide": "bottom",
+      "toSide": "left"
     },
     {
       "id": "normalize-post",
@@ -366,6 +385,14 @@
       "label": "读取结果后决定",
       "variant": "dashed",
       "role": "return"
+    },
+    {
+      "id": "log-telemetry",
+      "from": "log_result",
+      "to": "telemetry",
+      "label": "sessionTelemetry/record",
+      "variant": "dashed",
+      "role": "async"
     }
   ],
   "cards": [

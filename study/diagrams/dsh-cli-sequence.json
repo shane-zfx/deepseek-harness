@@ -5,10 +5,7 @@
     "title": "CLI 入口：headless 任务到退出码的调用与失败出口",
     "locale": "zh-CN",
     "quality_profile": "showcase",
-    "viewBox": [
-      1010,
-      1300
-    ]
+    "output": "dsh-cli-sequence.html"
   },
   "participants": [
     {
@@ -87,7 +84,7 @@
       "from": "user",
       "to": "cli",
       "y": 186,
-      "label": "step 1 在终端以 headless 模式运行任务",
+      "label": "step 1 终端运行 headless 任务",
       "variant": "emphasis"
     },
     {
@@ -95,7 +92,7 @@
       "from": "cli",
       "to": "agent",
       "y": 222,
-      "label": "step 2 启动 profile 插件树，创建（或按 sessionId 恢复）Agent 并投递任务",
+      "label": "step 2 启动插件树，创建/恢复 Agent 并投递任务",
       "variant": "emphasis"
     },
     {
@@ -103,7 +100,7 @@
       "from": "cli",
       "to": "user",
       "y": 258,
-      "label": "step 2.1 ✗ 启动或创建失败：报错并 exit 1",
+      "label": "step 2.1 ✗ 启动失败：exit 1",
       "variant": "security"
     },
     {
@@ -251,7 +248,7 @@
       "from": "cli",
       "to": "user",
       "y": 1100,
-      "label": "step 14.1 ✗ 非 completed 结束：exit 1",
+      "label": "step 14.1 ✗ 非 completed：exit 1",
       "variant": "security"
     },
     {
@@ -259,7 +256,7 @@
       "from": "user",
       "to": "cli",
       "y": 1140,
-      "label": "step 15 ✗ Ctrl+C（任意时刻）：树释放，turn aborted",
+      "label": "step 15 ✗ Ctrl+C：turn aborted",
       "variant": "security"
     },
     {

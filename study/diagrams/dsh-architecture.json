@@ -8,7 +8,8 @@
     "repository": {
       "url": "https://github.com/shane-zfx/deepseek-harness",
       "revision": "d743267388641bc76f17c45ce8b4c231aed1d32c"
-    }
+    },
+    "output": "dsh-architecture.html"
   },
   "components": [
     {

@@ -5,10 +5,7 @@
     "title": "Web 入口：提示词到回复的调用与失败出口",
     "locale": "zh-CN",
     "quality_profile": "showcase",
-    "viewBox": [
-      1010,
-      1380
-    ]
+    "output": "dsh-web-sequence.html"
   },
   "participants": [
     {

@@ -7,8 +7,9 @@
     "quality_profile": "showcase",
     "viewBox": [
       1080,
-      760
-    ]
+      696
+    ],
+    "output": "dsh-context-dataflow.html"
   },
   "stages": [
     {
@@ -52,7 +53,7 @@
       "label": "模型输出",
       "sublabel": "流式 chunk",
       "stage": 0,
-      "row": 4,
+      "row": 3,
       "tag": "assistant/message"
     },
     {
@@ -189,7 +190,7 @@
       "via": [
         [
           240,
-          613
+          499
         ],
         [
           240,
@@ -198,7 +199,7 @@
       ],
       "labelAt": [
         240,
-        560
+        440
       ]
     },
     {

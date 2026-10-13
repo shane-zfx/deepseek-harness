@@ -5,10 +5,7 @@
     "title": "股市成交量分析：一轮 session 的 context 处理",
     "locale": "zh-CN",
     "quality_profile": "showcase",
-    "viewBox": [
-      1010,
-      1480
-    ]
+    "output": "dsh-context-lifecycle.html"
   },
   "participants": [
     {
@@ -87,7 +84,7 @@
       "from": "user",
       "to": "loop",
       "y": 186,
-      "label": "step 1 输入成交量分析任务 → followup()",
+      "label": "step 1 输入分析任务 → followup()",
       "variant": "emphasis"
     },
     {
@@ -95,7 +92,7 @@
       "from": "loop",
       "to": "log",
       "y": 222,
-      "label": "step 2 seq 0 turn/start；preStep 取消息、组装提示词、过 pre-step 门"
+      "label": "step 2 seq 0 turn/start；preStep 组装提示词、过 pre-step"
     },
     {
       "id": "m3",
@@ -142,7 +139,7 @@
       "from": "loop",
       "to": "log",
       "y": 456,
-      "label": "step 8 seq 7 assistant/message（内嵌完整流）· seq 8 tool/call 先落盘"
+      "label": "step 8 seq 7 assistant（内嵌流）· seq 8 tool/call 先落盘"
     },
     {
       "id": "m9",
@@ -164,7 +161,7 @@
       "from": "loop",
       "to": "log",
       "y": 604,
-      "label": "step 11 seq 10 step/end · seq 11 step/start · seq 12 assistant 待写（不重复 pre-step）"
+      "label": "step 11 seq 10/11 step 边界（不重复 pre-step）"
     },
     {
       "id": "m12",
@@ -195,7 +192,7 @@
       "from": "user",
       "to": "loop",
       "y": 796,
-      "label": "step 15 输入“再对比港股”（历史已 104k）",
+      "label": "step 15 输入“再对比港股”",
       "variant": "emphasis"
     },
     {
@@ -289,7 +286,7 @@
       "from": "loop",
       "to": "user",
       "y": 1338,
-      "label": "step 26 UI / 统计 / 遥测 / fork 读同一份日志",
+      "label": "step 26 UI/统计/遥测读同一日志",
       "variant": "return"
     }
   ],
